@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="shortcut icon" href="..." type="image/x-icon" />
+    <title>Intranet - Sistema de Perguntas e Respostas</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Tela de Login -->
+    <div id="loginScreen" class="login-screen">
+      <div class="login-container">
+        <div class="login-header">
+          <h1><img src="..." alt="" />Intranet Corporativa</h1>
+          <p>Sistema de Perguntas e Respostas</p>
+        </div>
+        <form id="loginForm" class="login-form">
+          <div class="form-group">
+            <label for="username">Usuário:</label>
+            <input type="text" id="username" name="username" required />
+          </div>
+          <div class="form-group">
+            <label for="password">Senha:</label>
+            <input type="password" id="password" name="password" required />
+          </div>
+          <button type="submit" class="login-btn">Entrar</button>
+          <div
+            id="loginError"
+            class="error-message"
+            style="display: none"
+          ></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Aplicação Principal -->
+    <div id="mainApp" class="main-app" style="display: none">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-content">
+          <h1><img src="..." alt="" />Intranet Corporativa</h1>
+          <div class="user-info">
+            <span id="userWelcome">Bem-vindo, Usuário</span>
+            <button id="logoutBtn" class="logout-btn">Sair</button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Navegação -->
+      <nav class="navigation">
+        <button class="nav-btn active" data-section="search">🔍 Buscar</button>
+        <button class="nav-btn" data-section="suggestions">
+          📝 Minhas Sugestões
+        </button>
+        <button class="nav-btn" data-section="training">
+          🎓 Treinamento
+        </button>
+        <button
+          class="nav-btn admin-only"
+          data-section="admin"
+          style="display: none"
+        >
+          ⚙️ Administração
+        </button>
+      </nav>
+
+      <!-- Seção de Busca -->
+      <section id="searchSection" class="content-section active">
+        <div class="container">
+          <div class="search-box">
+            <label for="pergunta">Faça sua pergunta:</label>
+            <div class="input-group">
+              <input
+                type="text"
+                id="pergunta"
+                placeholder="Digite sua pergunta aqui..."
+                autocomplete="off"
+              />
+              <button id="buscar" type="button">
+                <span class="search-icon">🔍</span>
+                Buscar
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="response-section"
+            id="responseSection"
+            style="display: none"
+          >
+            <div class="response-box">
+              <h3>Resposta:</h3>
+              <div id="resposta" class="response-content"></div>
+              <div id="metadata" class="metadata"></div>
+            
+            <!-- Novo Bloco de Script -->
+              <div id="scriptBox" class="script-box" style="display: none">
+                <h3>Script:</h3>
+                <div id="scriptContent" class="script-content"></div>
+              </div>
+
+              <!-- Formulário de Sugestão -->
+              <div
+                id="suggestionForm"
+                class="suggestion-form"
+                style="display: none"
+              >
+                <h4>💡 Enviar Sugestão de Melhoria</h4>
+                <p>
+                  A resposta não foi satisfatória? Envie uma sugestão para
+                  melhorar nossa base de conhecimento:
+                </p>
+                <form id="newSuggestionForm">
+                  <input
+                    type="hidden"
+                    id="suggestionQuestion"
+                    name="question"
+                  />
+                  <input
+                    type="hidden"
+                    id="suggestionAnswer"
+                    name="answer_found"
+                  />
+                  <div class="form-group">
+                    <label for="suggestionText">Sua sugestão:</label>
+                    <textarea
+                      id="suggestionText"
+                      name="suggestion_text"
+                      rows="4"
+                      placeholder="Descreva como podemos melhorar a resposta ou adicionar informações relevantes..."
+                      required
+                    ></textarea>
+                  </div>
+                  <button type="submit" class="suggestion-btn">
+                    Enviar Sugestão
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <div class="loading" id="loading" style="display: none">
+            <div class="spinner"></div>
+            <p>Buscando resposta...</p>
+          </div>
+
+          <div class="error-message" id="errorMessage" style="display: none">
+            <div class="error-content">
+              <span class="error-icon">⚠️</span>
+              <div id="errorText"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Seção de Sugestões -->
+      <section id="suggestionsSection" class="content-section">
+        <div class="container">
+          <h2>📝 Minhas Sugestões</h2>
+          <div class="suggestions-list" id="suggestionsList">
+            <div class="loading" id="suggestionsLoading">
+              <div class="spinner"></div>
+              <p>Carregando sugestões...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Seção de Treinamento -->
+      <section id="trainingSection" class="content-section">
+        <div class="container">
+          <h2>🎓 Treinamento</h2>
+          <div class="training-list" id="trainingList">
+            <div class="loading" id="trainingLoading">
+              <div class="spinner"></div>
+              <p>Carregando treinamentos...</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Seção de Administração -->
+      <section id="adminSection" class="content-section">
+        <div class="container">
+          <h2>⚙️ Painel de Administração</h2>
+
+          <div class="admin-tabs">
+            <button class="admin-tab-btn active" data-tab="users">
+              👥 Usuários
+            </button>
+            <button class="admin-tab-btn" data-tab="suggestions">
+              📝 Sugestões
+            </button>
+            <button class="admin-tab-btn master-only" data-tab="knowledge" style="display: none">
+              📖 Base de Conhecimento
+            </button>
+            <button class="admin-tab-btn master-only" data-tab="training" style="display: none">
+              🎓 Gerenciar Treinamentos
+            </button>
+          </div>
+
+          <!-- Aba de Usuários -->
+          <div id="usersTab" class="admin-tab-content active">
+            <div class="admin-header">
+              <h3>Gerenciar Usuários</h3>
+              <button id="addUserBtn" class="add-btn">
+                + Adicionar Usuário
+              </button>
+            </div>
+
+            <div class="users-list" id="usersList">
+              <div class="loading" id="usersLoading">
+                <div class="spinner"></div>
+                <p>Carregando usuários...</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba de Sugestões -->
+          <div id="suggestionsTab" class="admin-tab-content">
+            <div class="admin-header">
+              <h3>Gerenciar Sugestões</h3>
+              <div class="filter-group">
+                <select id="statusFilter">
+                  <option value="">Todos os status</option>
+                  <option value="pendente">Pendente</option>
+                  <option value="analisando">Analisando</option>
+                  <option value="aprovado">Aprovado</option>
+                  <option value="rejeitado">Rejeitado</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="admin-suggestions-list" id="adminSuggestionsList">
+              <div class="loading" id="adminSuggestionsLoading">
+                <div class="spinner"></div>
+                <p>Carregando sugestões...</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba de Base de Conhecimento (Master Only) -->
+          <div id="knowledgeTab" class="admin-tab-content">
+            <div class="admin-header">
+              <h3>Gerenciar Base de Conhecimento</h3>
+              <button id="addKnowledgeBtn" class="add-btn">
+                + Adicionar Pergunta
+              </button>
+            </div>
+
+            <div class="knowledge-list" id="knowledgeList">
+              <div class="loading" id="knowledgeLoading">
+                <div class="spinner"></div>
+                <p>Carregando base de conhecimento...</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba de Treinamento (Master Only) -->
+          <div id="trainingTab" class="admin-tab-content">
+            <div class="admin-header">
+              <h3>Gerenciar Treinamentos</h3>
+              <button id="addTrainingBtn" class="add-btn">
+                + Adicionar Treinamento
+              </button>
+            </div>
+
+            <div class="admin-training-list" id="adminTrainingList">
+              <div class="loading" id="adminTrainingLoading">
+                <div class="spinner"></div>
+                <p>Carregando treinamentos...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Modal para Adicionar/Editar Usuário -->
+    <div id="userModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="userModalTitle">Adicionar Usuário</h3>
+          <button class="close-btn" id="closeUserModal">&times;</button>
+        </div>
+        <form id="userForm">
+          <input type="hidden" id="userId" name="id" />
+          <div class="form-group">
+            <label for="userUsername">Usuário:</label>
+            <input type="text" id="userUsername" name="username" required />
+          </div>
+          <div class="form-group">
+            <label for="userEmail">Email:</label>
+            <input type="email" id="userEmail" name="email" required />
+          </div>
+          <div class="form-group">
+            <label for="userFullName">Nome Completo:</label>
+            <input type="text" id="userFullName" name="full_name" required />
+          </div>
+          <div class="form-group">
+            <label for="userPassword">Senha:</label>
+            <input type="password" id="userPassword" name="password" />
+            <small id="passwordHelp"
+              >Deixe em branco para manter a senha atual (apenas ao
+              editar)</small
+            >
+          </div>
+          <div class="form-group checkbox-group">
+            <label>
+              <input type="checkbox" id="userIsAdmin" name="is_admin" />
+              Administrador
+            </label>
+          </div>
+          <div class="form-group" id="adminRoleGroup" style="display: none">
+            <label for="userAdminRole">Tipo de Administrador:</label>
+            <select id="userAdminRole" name="admin_role">
+              <option value="supervisor">Supervisor</option>
+              <option value="master">Master</option>
+            </select>
+          </div>
+          <div class="form-group checkbox-group">
+            <label>
+              <input
+                type="checkbox"
+                id="userIsActive"
+                name="is_active"
+                checked
+              />
+              Ativo
+            </label>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" id="cancelUserBtn">
+              Cancelar
+            </button>
+            <button type="submit" class="save-btn">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal para Adicionar Treinamento -->
+    <div id="trainingModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Adicionar Treinamento</h3>
+          <button class="close-btn" id="closeTrainingModal">&times;</button>
+        </div>
+        <form id="trainingForm">
+          <div class="form-group">
+            <label for="trainingTitle">Título:</label>
+            <input type="text" id="trainingTitle" name="title" required />
+          </div>
+          <div class="form-group">
+            <label for="trainingDescription">Descrição:</label>
+            <textarea id="trainingDescription" name="description" rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="trainingFile">Arquivo (Vídeo ou PDF):</label>
+            <input type="file" id="trainingFile" name="file" accept=".pdf,.mp4,.webm,.ogg" required />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" id="cancelTrainingBtn">
+              Cancelar
+            </button>
+            <button type="submit" class="save-btn">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal para Gerenciar Sugestão -->
+    <div id="suggestionModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Gerenciar Sugestão</h3>
+          <button class="close-btn" id="closeSuggestionModal">&times;</button>
+        </div>
+        <div id="suggestionDetails"></div>
+        <form id="suggestionManageForm">
+          <input type="hidden" id="manageSuggestionId" name="id" />
+          <div class="form-group">
+            <label for="suggestionStatus">Status:</label>
+            <select id="suggestionStatus" name="status">
+              <option value="pendente">Pendente</option>
+              <option value="analisando">Analisando</option>
+              <option value="aprovado">Aprovado</option>
+              <option value="rejeitado">Rejeitado</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="adminResponse">Resposta do Administrador:</label>
+            <textarea
+              id="adminResponse"
+              name="admin_response"
+              rows="4"
+              placeholder="Resposta ou comentários do administrador..."
+            ></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" id="cancelSuggestionBtn">
+              Cancelar
+            </button>
+            <button type="submit" class="save-btn">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal para Adicionar/Editar Conhecimento -->
+    <div id="knowledgeModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="knowledgeModalTitle">Adicionar Pergunta</h3>
+          <button class="close-btn" id="closeKnowledgeModal">&times;</button>
+        </div>
+        <form id="knowledgeForm">
+          <input type="hidden" id="knowledgeId" name="id" />
+          <div class="form-group">
+            <label for="knowledgePergunta">Pergunta:</label>
+            <input type="text" id="knowledgePergunta" name="pergunta" required />
+          </div>
+          <div class="form-group">
+            <label for="knowledgeResposta">Resposta:</label>
+            <textarea id="knowledgeResposta" name="resposta" rows="4" required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="knowledgeScript">Script:</label>
+            <textarea id="knowledgeScript" name="script" rows="6" placeholder="Script opcional para atendimento..."></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" id="cancelKnowledgeBtn">
+              Cancelar
+            </button>
+            <button type="submit" class="save-btn">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

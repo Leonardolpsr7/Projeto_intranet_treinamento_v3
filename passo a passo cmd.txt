@@ -1,0 +1,15 @@
+cd .. até voltar a pasta  inicial 
+dir para visualizar a pasta 
+
+cd intranet_melhorada -> intranet_excel 
+
+pip install -r requirements.txt
+
+após executar 
+
+python src/main.py
+
+
+acessar o navegador 
+
+http://localhost:5000
