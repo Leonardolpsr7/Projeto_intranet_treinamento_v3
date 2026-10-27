@@ -1,10 +1,11 @@
 from flask import Blueprint, request, jsonify, session
-from src.models.user import User, db
+from src.models.user import User, db, AdminCategory
 from src.models.suggestion import Suggestion
 from datetime import datetime
 from functools import wraps
 import random
 import string
+from src.auth import supermaster_required, role_level
 
 suggestion_bp = Blueprint('suggestion', __name__)
 
@@ -117,10 +118,13 @@ def get_suggestion_by_protocol(protocol_number):
 def list_all_suggestions():
     try:
         status_filter = request.args.get('status')
+        category_filter = request.args.get('assigned_category')
         
         query = Suggestion.query
         if status_filter:
             query = query.filter_by(status=status_filter)
+        if category_filter:
+            query = query.filter_by(assigned_category=category_filter)
         
         suggestions = query.order_by(Suggestion.created_at.desc()).all()
         
@@ -176,6 +180,48 @@ def delete_suggestion(suggestion_id):
         db.session.commit()
         
         return jsonify({'message': 'Sugestão deletada com sucesso'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Erro interno: {str(e)}'}), 500
+
+@suggestion_bp.route('/admin/suggestions/<int:suggestion_id>/assign', methods=['PUT'])
+@supermaster_required
+def assign_suggestion(suggestion_id):
+    """Direciona uma sugestão para uma categoria de administrador (apenas Super Master)."""
+    try:
+        suggestion = Suggestion.query.get(suggestion_id)
+        if not suggestion:
+            return jsonify({'error': 'Sugestão não encontrada'}), 404
+        
+        data = request.get_json() or {}
+        category = (data.get('assigned_category') or '').strip()
+        if not category:
+            return jsonify({'error': 'Categoria de destino é obrigatória'}), 400
+        
+        cat = AdminCategory.query.filter_by(name=category).first()
+        if not cat:
+            return jsonify({'error': 'Categoria inválida'}), 400
+        if cat.name == 'supermaster':
+            return jsonify({'error': 'Não é possível direcionar para a categoria Super Master'}), 400
+        
+        admin_id = data.get('assigned_admin_id')
+        if admin_id:
+            admin = User.query.get(admin_id)
+            if not admin or not admin.is_admin or admin.admin_role != category:
+                return jsonify({'error': 'Administrador inválido para a categoria selecionada'}), 400
+        else:
+            admin_id = None
+        
+        suggestion.assigned_category = category
+        suggestion.assigned_admin_id = admin_id
+        suggestion.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Sugestão direcionada com sucesso',
+            'suggestion': suggestion.to_dict()
+        })
         
     except Exception as e:
         db.session.rollback()

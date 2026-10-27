@@ -694,6 +694,13 @@ select option {
   box-shadow: 0 12px 30px rgba(47, 230, 168, 0.45);
 }
 
+.filter-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 .filter-group select {
   padding: 11px 14px;
   border: 1px solid var(--glass-border-soft);

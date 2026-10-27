@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify, session
-from src.models.user import User, db
+from src.models.user import User, db, AdminCategory
 from datetime import datetime, timedelta
 from functools import wraps
 from flask import current_app
+from src.auth import role_level
 
 user_bp = Blueprint('user', __name__)
 
@@ -155,12 +156,20 @@ def create_user():
         if not is_strong:
             return jsonify({'error': msg}), 400
         
-        # Definir admin_role baseado em is_admin
+        # Definir admin_role baseado em is_admin e na hierarquia de categorias
         admin_role = 'user'
         if data.get('is_admin', False):
-            admin_role = data.get('admin_role', 'supervisor')  # Padrão supervisor
-            if admin_role not in ['supervisor', 'master']:
+            admin_role = (data.get('admin_role') or 'supervisor').strip()
+            cat = AdminCategory.query.filter_by(name=admin_role).first()
+            if not cat:
                 admin_role = 'supervisor'
+                cat = AdminCategory.query.filter_by(name='supervisor').first()
+            acting = User.query.get(session['user_id'])
+            acting_level = role_level(acting.admin_role) if acting and acting.is_admin else 0
+            if admin_role == 'supermaster':
+                return jsonify({'error': 'Não é possível criar um administrador Super Master'}), 403
+            if cat and cat.level > acting_level:
+                return jsonify({'error': 'Não é possível atribuir uma categoria superior à sua'}), 403
         
         # Criar novo usuário
         user = User(
@@ -221,18 +230,24 @@ def update_user(user_id):
         
         if 'is_admin' in data:
             user.is_admin = bool(data['is_admin'])
-            # Atualizar admin_role baseado em is_admin
-            if user.is_admin:
-                if 'admin_role' in data and data['admin_role'] in ['supervisor', 'master']:
-                    user.admin_role = data['admin_role']
-                elif user.admin_role not in ['supervisor', 'master']:
-                    user.admin_role = 'supervisor'
-            else:
+            if not user.is_admin:
                 user.admin_role = 'user'
-        elif 'admin_role' in data and user.is_admin:
-            # Permitir atualizar admin_role se já for admin
-            if data['admin_role'] in ['supervisor', 'master']:
-                user.admin_role = data['admin_role']
+
+        if user.is_admin and 'admin_role' in data and data['admin_role']:
+            new_role = data['admin_role'].strip()
+            cat = AdminCategory.query.filter_by(name=new_role).first()
+            if not cat:
+                new_role = 'supervisor'
+                cat = AdminCategory.query.filter_by(name='supervisor').first()
+            acting = User.query.get(session['user_id'])
+            acting_level = role_level(acting.admin_role) if acting and acting.is_admin else 0
+            if new_role == 'supermaster':
+                return jsonify({'error': 'Não é possível atribuir a categoria Super Master'}), 403
+            if cat and cat.level > acting_level:
+                return jsonify({'error': 'Não é possível atribuir uma categoria superior à sua'}), 403
+            user.admin_role = new_role
+        elif user.is_admin and user.admin_role not in [c.name for c in AdminCategory.query.all()]:
+            user.admin_role = 'supervisor'
         
         if 'is_active' in data:
             user.is_active = bool(data['is_active'])

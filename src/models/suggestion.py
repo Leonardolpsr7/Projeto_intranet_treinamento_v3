@@ -13,9 +13,12 @@ class Suggestion(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     admin_response = db.Column(db.Text, nullable=True)
+    assigned_category = db.Column(db.String(50), nullable=True)
+    assigned_admin_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     
     # Relacionamento com User
-    user = db.relationship('User', backref=db.backref('suggestions', lazy=True))
+    user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('suggestions', lazy=True))
+    assigned_admin = db.relationship('User', foreign_keys=[assigned_admin_id])
 
     def __repr__(self):
         return f'<Suggestion {self.protocol_number}>'
@@ -40,6 +43,8 @@ class Suggestion(db.Model):
             'status': self.status,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'admin_response': self.admin_response
+            'admin_response': self.admin_response,
+            'assigned_category': self.assigned_category,
+            'assigned_admin': self.assigned_admin.username if self.assigned_admin else None
         }
 

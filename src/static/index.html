@@ -198,6 +198,9 @@
             <button class="admin-tab-btn master-only" data-tab="training" style="display: none">
               🎓 Gerenciar Treinamentos
             </button>
+            <button class="admin-tab-btn supermaster-only" data-tab="categories" style="display: none">
+              🏷️ Categorias
+            </button>
           </div>
 
           <!-- Aba de Usuários -->
@@ -228,6 +231,9 @@
                   <option value="analisando">Analisando</option>
                   <option value="aprovado">Aprovado</option>
                   <option value="rejeitado">Rejeitado</option>
+                </select>
+                <select id="assignedCategoryFilter" class="supermaster-only" style="display: none">
+                  <option value="">Todas as categorias</option>
                 </select>
               </div>
             </div>
@@ -275,6 +281,22 @@
               <div class="loading" id="adminTrainingLoading">
                 <div class="spinner"></div>
                 <p>Carregando treinamentos...</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba de Categorias de Administrador (Super Master Only) -->
+          <div id="categoriesTab" class="admin-tab-content">
+            <div class="admin-header">
+              <h3>Gerenciar Categorias de Administrador</h3>
+              <button id="addCategoryBtn" class="add-btn">
+                + Nova Categoria
+              </button>
+            </div>
+            <div class="users-list" id="categoriesList">
+              <div class="loading" id="categoriesLoading">
+                <div class="spinner"></div>
+                <p>Carregando categorias...</p>
               </div>
             </div>
           </div>
@@ -480,6 +502,68 @@
       </div>
     </div>
 
+    <!-- Modal para Nova Categoria de Administrador -->
+    <div id="categoryModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Nova Categoria de Administrador</h3>
+          <button class="close-btn" id="closeCategoryModal">&times;</button>
+        </div>
+        <form id="categoryForm">
+          <div class="form-group">
+            <label for="categoryName">Nome da Categoria:</label>
+            <input type="text" id="categoryName" name="name" required />
+            <small>Use um nome simples (ex.: analista, coordenador).</small>
+          </div>
+          <div class="form-group">
+            <label for="categoryLevel">Nível:</label>
+            <input type="number" id="categoryLevel" name="level" min="1" max="2" value="1" required />
+            <small>Nível igual ou inferior ao Master (2). O Super Master (3) é reservado.</small>
+          </div>
+          <div class="form-group">
+            <label for="categoryDescription">Descrição:</label>
+            <input type="text" id="categoryDescription" name="description" />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" id="cancelCategoryBtn">
+              Cancelar
+            </button>
+            <button type="submit" class="save-btn">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal para Direcionar Sugestão -->
+    <div id="assignSuggestionModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Direcionar Sugestão</h3>
+          <button class="close-btn" id="closeAssignModal">&times;</button>
+        </div>
+        <form id="assignSuggestionForm">
+          <input type="hidden" id="assignSuggestionId" name="id" />
+          <div class="form-group">
+            <label for="assignCategory">Direcionar para a categoria:</label>
+            <select id="assignCategory" name="assigned_category" required></select>
+          </div>
+          <div class="form-group">
+            <label for="assignAdmin">Administrador responsável (opcional):</label>
+            <select id="assignAdmin" name="assigned_admin_id">
+              <option value="">— Qualquer um da categoria —</option>
+            </select>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" id="cancelAssignBtn">
+              Cancelar
+            </button>
+            <button type="submit" class="save-btn">Direcionar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <script src="script.js"></script>
+    <script src="admin_categories.js"></script>
   </body>
 </html>

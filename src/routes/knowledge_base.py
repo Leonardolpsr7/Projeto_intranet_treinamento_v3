@@ -25,7 +25,7 @@ def master_required(f):
             return jsonify({'error': 'Login necessário'}), 401
         
         user = User.query.get(session['user_id'])
-        if not user or not user.is_admin or user.admin_role != 'master':
+        if not user or not user.is_admin or user.admin_role not in ('master', 'supermaster'):
             return jsonify({'error': 'Acesso negado - apenas administradores master podem realizar esta ação'}), 403
         return f(*args, **kwargs)
     return decorated_function

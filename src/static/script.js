@@ -59,11 +59,19 @@ function showMainApp() {
             el.style.display = currentUser.is_admin ? 'block' : 'none';
         });
         
-        // Mostrar/ocultar seções apenas para master
+        // Mostrar/ocultar seções apenas para master (master ou superior)
         const masterElements = document.querySelectorAll('.master-only');
         masterElements.forEach(el => {
-            el.style.display = (currentUser.is_admin && currentUser.admin_role === 'master') ? 'block' : 'none';
+            el.style.display = (currentUser.is_admin && (currentUser.admin_role === 'master' || currentUser.admin_role === 'supermaster')) ? 'block' : 'none';
         });
+        // Mostrar/ocultar seções apenas para super master
+        const supermasterElements = document.querySelectorAll('.supermaster-only');
+        supermasterElements.forEach(el => {
+            el.style.display = (currentUser.is_admin && currentUser.admin_role === 'supermaster') ? 'block' : 'none';
+        });
+        if (currentUser.is_admin && currentUser.admin_role === 'supermaster') {
+            populateCategoryFilter();
+        }
     }
     
     // Carregar seção atual
@@ -384,7 +392,8 @@ function setupAdminEventListeners() {
     
     // Filtro de sugestões
     document.getElementById('statusFilter').addEventListener('change', (e) => {
-        loadAdminSuggestions(e.target.value);
+        const cat = document.getElementById('assignedCategoryFilter');
+        loadAdminSuggestions(e.target.value, cat ? cat.value : '');
     });
     
     // Adicionar conhecimento
@@ -397,6 +406,20 @@ function setupAdminEventListeners() {
     if (bulkKnowledgeBtn) {
         bulkKnowledgeBtn.addEventListener('click', () => {
             openBulkKnowledgeModal();
+        });
+    }
+
+    // Adicionar categoria de administrador (Super Master)
+    const addCategoryBtn = document.getElementById('addCategoryBtn');
+    if (addCategoryBtn) {
+        addCategoryBtn.addEventListener('click', () => openCategoryModal());
+    }
+
+    // Filtro de categoria nas sugestões (Super Master)
+    const assignedCategoryFilter = document.getElementById('assignedCategoryFilter');
+    if (assignedCategoryFilter) {
+        assignedCategoryFilter.addEventListener('change', () => {
+            loadAdminSuggestions(document.getElementById('statusFilter').value, assignedCategoryFilter.value);
         });
     }
 }
@@ -429,6 +452,8 @@ if (tabName === 'users') {
             loadKnowledge();
         } else if (tabName === 'training') {
             loadAdminTrainings();
+        } else if (tabName === 'categories') {
+            loadCategories();
         }
     }
 }
@@ -477,7 +502,7 @@ function displayUsers(users) {
             <div class="user-header">
                 <div>
                     <strong>${user.full_name}</strong> (${user.username})
-                    ${user.is_admin ? `<span class="status-badge status-aprovado">Admin ${user.admin_role === 'master' ? 'Master' : 'Supervisor'}</span>` : ''}
+                    ${user.is_admin ? `<span class="status-badge status-aprovado">Admin ${capitalize(user.admin_role)}</span>` : ''}
                     ${!user.is_active ? '<span class="status-badge status-rejeitado">Inativo</span>' : ''}
                 </div>
             </div>
@@ -495,13 +520,16 @@ function displayUsers(users) {
 }
 
 // Carregar sugestões (admin)
-async function loadAdminSuggestions(status = '') {
+async function loadAdminSuggestions(status = '', category = '') {
     const suggestionsList = document.getElementById('adminSuggestionsList');
     const loading = document.getElementById('adminSuggestionsLoading');
     
     showElement(loading);
     
-    const url = status ? `/api/admin/suggestions?status=${status}` : '/api/admin/suggestions';
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (category) params.set('assigned_category', category);
+    const url = '/api/admin/suggestions' + (params.toString() ? '?' + params.toString() : '');
     
     try {
         const response = await fetch(url, {
@@ -533,11 +561,13 @@ function displayAdminSuggestions(suggestions) {
         return;
     }
     
+    const isSuper = currentUser && currentUser.is_admin && currentUser.admin_role === 'supermaster';
     suggestionsList.innerHTML = suggestions.map(suggestion => `
         <div class="admin-suggestion-item">
             <div class="suggestion-header">
                 <span class="protocol-number">Protocolo: ${suggestion.protocol_number}</span>
                 <span class="status-badge status-${suggestion.status}">${suggestion.status}</span>
+                ${suggestion.assigned_category ? `<span class="status-badge status-analisando">Direcionada: ${capitalize(suggestion.assigned_category)}${suggestion.assigned_admin ? ' · ' + suggestion.assigned_admin : ''}</span>` : ''}
             </div>
             <div class="suggestion-content">
                 <p><strong>Usuário:</strong> ${suggestion.username}</p>
@@ -549,6 +579,8 @@ function displayAdminSuggestions(suggestions) {
             </div>
             <div class="action-buttons">
                 <button class="manage-btn" onclick="manageSuggestion(${suggestion.id})">Gerenciar</button>
+                ${isSuper ? `<button class="edit-btn" onclick="assignSuggestion(${suggestion.id})">Direcionar</button>` : ''}
+                ${isSuper ? `<button class="delete-btn" onclick="deleteAdminSuggestion(${suggestion.id})">Excluir</button>` : ''}
             </div>
         </div>
     `).join('');
@@ -591,6 +623,22 @@ function setupModalEventListeners() {
     document.getElementById('bulkKnowledgeModal').addEventListener('click', (e) => {
         if (e.target.id === 'bulkKnowledgeModal') closeBulkKnowledgeModal();
     });
+
+    // Modal de categoria de administrador
+    document.getElementById('closeCategoryModal').addEventListener('click', closeCategoryModal);
+    document.getElementById('cancelCategoryBtn').addEventListener('click', closeCategoryModal);
+    document.getElementById('categoryForm').addEventListener('submit', handleCategoryForm);
+    document.getElementById('categoryModal').addEventListener('click', (e) => {
+        if (e.target.id === 'categoryModal') closeCategoryModal();
+    });
+
+    // Modal de direcionar sugestão
+    document.getElementById('closeAssignModal').addEventListener('click', closeAssignModal);
+    document.getElementById('cancelAssignBtn').addEventListener('click', closeAssignModal);
+    document.getElementById('assignSuggestionForm').addEventListener('submit', handleAssignSuggestion);
+    document.getElementById('assignSuggestionModal').addEventListener('click', (e) => {
+        if (e.target.id === 'assignSuggestionModal') closeAssignModal();
+    });
     
     // Controle de exibição do campo admin_role
     document.getElementById('userIsAdmin').addEventListener('change', (e) => {
@@ -600,13 +648,15 @@ function setupModalEventListeners() {
 }
 
 // Funções de usuário
-function openUserModal(user = null) {
+async function openUserModal(user = null) {
     const modal = document.getElementById('userModal');
     const form = document.getElementById('userForm');
     const title = document.getElementById('userModalTitle');
     const passwordHelp = document.getElementById('passwordHelp');
     
     const adminRoleGroup = document.getElementById('adminRoleGroup');
+    
+    await populateAdminRoleSelect(user ? user.admin_role : 'supervisor');
     
     if (user) {
         title.textContent = 'Editar Usuário';
@@ -994,11 +1044,11 @@ async function deleteTraining(id) {
 
 // Funções utilitárias
 function showElement(element) {
-    element.style.display = 'block';
+    if (element) element.style.display = 'block';
 }
 
 function hideElement(element) {
-    element.style.display = 'none';
+    if (element) element.style.display = 'none';
 }
 
 function showLoading() {

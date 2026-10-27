@@ -13,6 +13,7 @@ from src.routes.excel_search import excel_bp
 from src.routes.suggestion import suggestion_bp
 from src.routes.knowledge_base import knowledge_bp
 from src.routes.training import training_bp
+from src.routes.admin_category import admin_category_bp
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 CORS(app, supports_credentials=True)  # Habilita CORS com suporte a credenciais
@@ -28,6 +29,7 @@ app.register_blueprint(excel_bp, url_prefix='/api')
 app.register_blueprint(suggestion_bp, url_prefix='/api')
 app.register_blueprint(knowledge_bp, url_prefix='/api')
 app.register_blueprint(training_bp, url_prefix='/api')
+app.register_blueprint(admin_category_bp, url_prefix='/api')
 
 # Configuração do banco de dados
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'database', 'app.db')}"
@@ -37,20 +39,45 @@ db.init_app(app)
 # Criar tabelas
 with app.app_context():
     db.create_all()
-    
-    # Criar usuário admin padrão se não existir
-    from src.models.user import User
-    if not User.query.filter_by(username='admin').first():
+
+    from src.models.user import User, AdminCategory
+
+    # Migração: adiciona colunas de direcionamento à tabela suggestion, se faltarem
+    from sqlalchemy import inspect, text
+    inspector = inspect(db.engine)
+    suggestion_cols = [c['name'] for c in inspector.get_columns('suggestion')]
+    if 'assigned_category' not in suggestion_cols:
+        db.session.execute(text("ALTER TABLE suggestion ADD COLUMN assigned_category VARCHAR(50)"))
+    if 'assigned_admin_id' not in suggestion_cols:
+        db.session.execute(text("ALTER TABLE suggestion ADD COLUMN assigned_admin_id INTEGER"))
+    db.session.commit()
+
+    # Criar categorias de administrador padrão
+    if AdminCategory.query.count() == 0:
+        db.session.add_all([
+            AdminCategory(name='supervisor', level=1, description='Supervisor - acesso administrativo básico', is_system=True),
+            AdminCategory(name='master', level=2, description='Master - acesso total ao sistema', is_system=True),
+            AdminCategory(name='supermaster', level=3, description='Super Master - gerencia categorias e direciona sugestões', is_system=True),
+        ])
+        db.session.commit()
+
+    # Criar usuário admin padrão (Super Master) se não existir
+    admin_user = User.query.filter_by(username='admin').first()
+    if not admin_user:
         admin_user = User(
             username='admin',
             email='admin@intranet.com',
             full_name='Administrador do Sistema',
             is_admin=True,
-            admin_role='master',
+            admin_role='supermaster',
             is_active=True
         )
         admin_user.set_password('admin123')
         db.session.add(admin_user)
+        db.session.commit()
+    elif admin_user.admin_role == 'master':
+        # Promover o admin master padrão a Super Master
+        admin_user.admin_role = 'supermaster'
         db.session.commit()
 
 @app.route('/', defaults={'path': ''})

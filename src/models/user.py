@@ -39,3 +39,23 @@ class User(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'last_login': self.last_login.isoformat() if self.last_login else None
         }
+
+
+class AdminCategory(db.Model):
+    """Categoria de administrador com nível hierárquico."""
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False)
+    level = db.Column(db.Integer, nullable=False, default=1)
+    description = db.Column(db.String(200))
+    is_system = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'level': self.level,
+            'description': self.description,
+            'is_system': self.is_system,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
