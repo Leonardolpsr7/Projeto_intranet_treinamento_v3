@@ -1,6 +1,9 @@
 // Estado da aplicação
 let currentUser = null;
 let currentSection = 'search';
+// Cache da base de conhecimento (mantém sempre carregada)
+let knowledgeCache = null;
+let knowledgeLoaded = false;
 
 // Elementos DOM
 const loginScreen = document.getElementById('loginScreen');
@@ -157,6 +160,9 @@ async function handleLogout() {
         });
         
         currentUser = null;
+        // Limpa o cache da base de conhecimento ao sair
+        knowledgeCache = null;
+        knowledgeLoaded = false;
         showLoginScreen();
     } catch (error) {
         console.error('Erro no logout:', error);
@@ -385,6 +391,14 @@ function setupAdminEventListeners() {
     document.getElementById('addKnowledgeBtn').addEventListener('click', () => {
         openKnowledgeModal();
     });
+
+    // Adicionar várias perguntas (lote)
+    const bulkKnowledgeBtn = document.getElementById('bulkKnowledgeBtn');
+    if (bulkKnowledgeBtn) {
+        bulkKnowledgeBtn.addEventListener('click', () => {
+            openBulkKnowledgeModal();
+        });
+    }
 }
 
 // Mostrar aba da administração
@@ -412,7 +426,7 @@ if (tabName === 'users') {
         } else if (tabName === 'suggestions') {
             loadAdminSuggestions();
         } else if (tabName === 'knowledge') {
-            loadKnowledgeBase();
+            loadKnowledge();
         } else if (tabName === 'training') {
             loadAdminTrainings();
         }
@@ -568,6 +582,14 @@ function setupModalEventListeners() {
     
     document.getElementById('knowledgeModal').addEventListener('click', (e) => {
         if (e.target.id === 'knowledgeModal') closeKnowledgeModal();
+    });
+
+    // Modal de base de conhecimento em lote
+    document.getElementById('closeBulkKnowledgeModal').addEventListener('click', closeBulkKnowledgeModal);
+    document.getElementById('cancelBulkKnowledgeBtn').addEventListener('click', closeBulkKnowledgeModal);
+    document.getElementById('bulkKnowledgeForm').addEventListener('submit', handleBulkKnowledge);
+    document.getElementById('bulkKnowledgeModal').addEventListener('click', (e) => {
+        if (e.target.id === 'bulkKnowledgeModal') closeBulkKnowledgeModal();
     });
     
     // Controle de exibição do campo admin_role
@@ -1000,23 +1022,31 @@ function hideError(errorElement) {
 // ========== Funções de Base de Conhecimento ==========
 
 // Carregar base de conhecimento
-async function loadKnowledge() {
+async function loadKnowledge(force = false) {
     const knowledgeList = document.getElementById('knowledgeList');
     const loading = document.getElementById('knowledgeLoading');
-    
+
+    // Mantém a base sempre carregada: usa o cache e só busca novamente se forçado
+    if (knowledgeLoaded && !force && knowledgeCache) {
+        displayKnowledge(knowledgeCache);
+        return;
+    }
+
     showElement(loading);
-    
+
     try {
         const response = await fetch('/api/knowledge-base', {
             credentials: 'include'
         });
-        
+
         const data = await response.json();
-        
+
         hideElement(loading);
-        
+
         if (response.ok) {
-            displayKnowledge(data.knowledge);
+            knowledgeCache = data.knowledge;
+            knowledgeLoaded = true;
+            displayKnowledge(knowledgeCache);
         } else {
             knowledgeList.innerHTML = `<div class="error-message">${data.error}</div>`;
         }
@@ -1117,7 +1147,7 @@ async function deleteKnowledge(knowledgeId) {
         const data = await response.json();
         
         if (response.ok) {
-            loadKnowledge();
+            loadKnowledge(true);
             alert(data.message);
         } else {
             alert('Erro: ' + data.error);
@@ -1157,13 +1187,58 @@ async function handleKnowledgeForm(e) {
         
         if (response.ok) {
             closeKnowledgeModal();
-            loadKnowledge();
+            loadKnowledge(true);
             alert(data.message);
         } else {
             alert('Erro: ' + data.error);
         }
     } catch (error) {
         console.error('Erro ao salvar conhecimento:', error);
+        alert('Erro de conexão. Tente novamente.');
+    }
+}
+
+// ========== Base de Conhecimento em Lote ==========
+
+function openBulkKnowledgeModal() {
+    const modal = document.getElementById('bulkKnowledgeModal');
+    document.getElementById('bulkKnowledgeForm').reset();
+    showElement(modal);
+}
+
+function closeBulkKnowledgeModal() {
+    hideElement(document.getElementById('bulkKnowledgeModal'));
+}
+
+async function handleBulkKnowledge(e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = formData.get('data');
+    if (!data || !data.trim()) {
+        alert('Cole ao menos uma linha de dados.');
+        return;
+    }
+    try {
+        const response = await fetch('/api/knowledge-base/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ data })
+        });
+        const result = await response.json();
+        if (response.ok) {
+            closeBulkKnowledgeModal();
+            loadKnowledge(true); // atualiza o cache da base
+            alert(
+                `${result.message}\n` +
+                `Ignoradas (duplicadas): ${result.skipped_duplicates}\n` +
+                `Inválidas: ${result.skipped_invalid}`
+            );
+        } else {
+            alert('Erro: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Erro ao importar em lote:', error);
         alert('Erro de conexão. Tente novamente.');
     }
 }

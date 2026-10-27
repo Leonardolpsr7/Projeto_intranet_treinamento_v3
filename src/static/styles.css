@@ -1064,3 +1064,18 @@ select option {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(123, 92, 255, 0.6);
 }
+
+/* Admin header actions (múltiplos botões) */
+.admin-header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Textarea de importação em lote */
+.bulk-textarea {
+  font-family: "Consolas", "Monaco", monospace;
+  font-size: 0.9rem;
+  white-space: pre;
+  resize: vertical;
+}

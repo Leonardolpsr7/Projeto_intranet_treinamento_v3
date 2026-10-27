@@ -244,9 +244,14 @@
           <div id="knowledgeTab" class="admin-tab-content">
             <div class="admin-header">
               <h3>Gerenciar Base de Conhecimento</h3>
-              <button id="addKnowledgeBtn" class="add-btn">
-                + Adicionar Pergunta
-              </button>
+              <div class="admin-header-actions">
+                <button id="bulkKnowledgeBtn" class="cancel-btn">
+                  + Adicionar Várias
+                </button>
+                <button id="addKnowledgeBtn" class="add-btn">
+                  + Adicionar Pergunta
+                </button>
+              </div>
             </div>
 
             <div class="knowledge-list" id="knowledgeList">
@@ -434,6 +439,42 @@
               Cancelar
             </button>
             <button type="submit" class="save-btn">Salvar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal para Adicionar Várias Perguntas (Lote) -->
+    <div id="bulkKnowledgeModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Adicionar Várias Perguntas</h3>
+          <button class="close-btn" id="closeBulkKnowledgeModal">&times;</button>
+        </div>
+        <form id="bulkKnowledgeForm">
+          <div class="form-group">
+            <label for="bulkKnowledgeData"
+              >Cole os dados (uma pergunta por linha):</label
+            >
+            <textarea
+              id="bulkKnowledgeData"
+              name="data"
+              rows="10"
+              class="bulk-textarea"
+              placeholder="Pergunta&#9;Resposta&#9;Script (separados por Tab)&#10;ou Pergunta;Resposta;Script (separados por ;)&#10;&#10;Exemplo:&#10;Como redefinir senha&#9;Acesse o portal e clique em esqueci minha senha&#9;Roteiro de atendimento..."
+              required
+            ></textarea>
+            <small
+              >Cada linha = 1 item. Campos separados por <strong>Tab</strong>
+              (cole direto do Excel) ou <strong>;</strong>. Linhas duplicadas
+              ou inválidas são ignoradas.</small
+            >
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" id="cancelBulkKnowledgeBtn">
+              Cancelar
+            </button>
+            <button type="submit" class="save-btn">Importar</button>
           </div>
         </form>
       </div>

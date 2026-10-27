@@ -198,3 +198,71 @@ def delete_knowledge(knowledge_id):
         
     except Exception as e:
         return jsonify({'error': f'Erro ao remover pergunta: {str(e)}'}), 500
+
+@knowledge_bp.route('/knowledge-base/bulk', methods=['POST'])
+@master_required
+def add_knowledge_bulk():
+    """Adiciona várias perguntas de uma vez (apenas master).
+    Corpo: { "data": "<texto com uma pergunta por linha>" }
+    Cada linha: Pergunta<TAB>Resposta<TAB>Script  (ou separado por ;)
+    Linhas duplicadas (mesma pergunta) ou inválidas são ignoradas.
+    """
+    try:
+        data = request.get_json() or {}
+        raw = data.get('data', '')
+        if not raw.strip():
+            return jsonify({'error': 'Nenhum dado fornecido'}), 400
+
+        excel_path = get_excel_path()
+        df = pd.read_excel(excel_path)
+
+        # Conjunto de perguntas já existentes (normalizado) p/ evitar duplicidade
+        existing = set()
+        for _, row in df.iterrows():
+            if pd.isna(row['Pergunta']):
+                continue
+            existing.add(str(row['Pergunta']).strip().lower())
+
+        added = 0
+        skipped_dup = 0
+        skipped_invalid = 0
+        new_rows = []
+
+        for line in raw.splitlines():
+            line = line.rstrip('\r')
+            if not line.strip():
+                continue
+            # Aceita separação por Tab (cole do Excel) ou por ;
+            parts = line.split('\t')
+            if len(parts) < 2:
+                parts = line.split(';')
+            if len(parts) < 2:
+                skipped_invalid += 1
+                continue
+            pergunta = parts[0].strip()
+            resposta = parts[1].strip()
+            script = parts[2].strip() if len(parts) > 2 else ''
+            if not pergunta or not resposta:
+                skipped_invalid += 1
+                continue
+            if pergunta.lower() in existing:
+                skipped_dup += 1
+                continue
+            existing.add(pergunta.lower())
+            new_rows.append({'Pergunta': pergunta, 'Resposta': resposta, 'Script': script})
+            added += 1
+
+        if new_rows:
+            df = pd.concat([df, pd.DataFrame(new_rows)], ignore_index=True)
+            save_excel_safely(df, excel_path)
+
+        return jsonify({
+            'message': f'{added} pergunta(s) adicionada(s)',
+            'added': added,
+            'skipped_duplicates': skipped_dup,
+            'skipped_invalid': skipped_invalid,
+            'total': len(df)
+        }), 201
+
+    except Exception as e:
+        return jsonify({'error': f'Erro ao adicionar em lote: {str(e)}'}), 500
