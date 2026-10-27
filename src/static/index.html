@@ -192,6 +192,9 @@
             <button class="admin-tab-btn" data-tab="suggestions">
               📝 Sugestões
             </button>
+            <button class="admin-tab-btn" data-tab="mysuggestions">
+              💡 Minhas Sugestões
+            </button>
             <button class="admin-tab-btn master-only" data-tab="knowledge" style="display: none">
               📖 Base de Conhecimento
             </button>
@@ -240,6 +243,19 @@
 
             <div class="admin-suggestions-list" id="adminSuggestionsList">
               <div class="loading" id="adminSuggestionsLoading">
+                <div class="spinner"></div>
+                <p>Carregando sugestões...</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Aba de Minhas Sugestões -->
+          <div id="mysuggestionsTab" class="admin-tab-content">
+            <div class="admin-header">
+              <h3>Minhas Sugestões de Melhoria</h3>
+            </div>
+            <div class="suggestions-list" id="myAdminSuggestionsList">
+              <div class="loading" id="myAdminSuggestionsLoading">
                 <div class="spinner"></div>
                 <p>Carregando sugestões...</p>
               </div>

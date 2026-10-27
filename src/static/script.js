@@ -454,8 +454,64 @@ if (tabName === 'users') {
             loadAdminTrainings();
         } else if (tabName === 'categories') {
             loadCategories();
+        } else if (tabName === 'mysuggestions') {
+            loadMyAdminSuggestions();
         }
     }
+}
+
+// Carregar sugestões do próprio usuário (dentro do painel de administração)
+async function loadMyAdminSuggestions() {
+    const list = document.getElementById('myAdminSuggestionsList');
+    const loading = document.getElementById('myAdminSuggestionsLoading');
+    if (!list) return;
+
+    showElement(loading);
+
+    try {
+        const response = await fetch('/api/suggestions', {
+            credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        hideElement(loading);
+
+        if (response.ok) {
+            displayMyAdminSuggestions(data.suggestions);
+        } else {
+            list.innerHTML = `<div class="error-message">${data.error}</div>`;
+        }
+    } catch (error) {
+        hideElement(loading);
+        console.error('Erro ao carregar minhas sugestões:', error);
+        list.innerHTML = '<div class="error-message">Erro ao carregar sugestões.</div>';
+    }
+}
+
+// Exibir sugestões do próprio usuário no painel de administração
+function displayMyAdminSuggestions(suggestions) {
+    const list = document.getElementById('myAdminSuggestionsList');
+
+    if (suggestions.length === 0) {
+        list.innerHTML = '<div class="text-center">Nenhuma sugestão encontrada.</div>';
+        return;
+    }
+
+    list.innerHTML = suggestions.map(suggestion => `
+        <div class="suggestion-item">
+            <div class="suggestion-header">
+                <span class="protocol-number">Protocolo: ${suggestion.protocol_number}</span>
+                <span class="status-badge status-${suggestion.status}">${suggestion.status}</span>
+            </div>
+            <div class="suggestion-content">
+                <p><strong>Pergunta:</strong> ${suggestion.question}</p>
+                <p><strong>Sugestão:</strong> ${suggestion.suggestion_text}</p>
+                ${suggestion.admin_response ? `<p><strong>Resposta do Admin:</strong> ${suggestion.admin_response}</p>` : ''}
+                <p><small>Criado em: ${new Date(suggestion.created_at).toLocaleString('pt-BR')}</small></p>
+            </div>
+        </div>
+    `).join('');
 }
 
 // Carregar dados da administração
